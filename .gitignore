@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.js
+*.js.map
+*.d.ts
+.env
+bun.lock
+.DS_Store
