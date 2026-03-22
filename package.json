@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "Grafana dashboards as TypeScript code (Grafana Foundation SDK)",
   "scripts": {
-    "build": "bun run build:vw && bun run build:vw-detail && bun run build:fems && bun run build:detail",
-    "build:vw": "bun src/vw-id7.ts > dist/vw-id7.json",
-    "build:vw-detail": "bun src/vw-id7-detail.ts > dist/vw-id7-detail.json",
+    "build": "bun run build:vw-id7 && bun run build:vw-id3 && bun run build:vw-detail && bun run build:fems && bun run build:detail",
+    "build:vw-id7": "bun src/vw-id.ts id7 > dist/vw-id7.json",
+    "build:vw-id3": "bun src/vw-id.ts id3 > dist/vw-id3.json",
+    "build:vw-detail": "bun src/vw-id-detail.ts > dist/vw-id-detail.json",
     "build:fems": "bun src/fems-energy.ts > dist/fems-energy.json",
     "build:detail": "bun src/fems-detail.ts > dist/fems-detail.json",
     "typecheck": "tsc --noEmit"

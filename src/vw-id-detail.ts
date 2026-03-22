@@ -1,24 +1,24 @@
 /**
- * VW ID.7 Detail - Drilldown Dashboard
+ * VW ID Detail - Drilldown Dashboard
  *
- * Zeigt eine gewählte Metrik als einzelne Kurve mit Statistiken.
- * Klick auf Stat/Gauge im VW ID.7 Dashboard → öffnet Detailansicht.
+ * Zeigt eine gewaehlte Metrik als einzelne Kurve mit Statistiken.
+ * Klick auf Stat/Gauge im VW ID Dashboard -> oeffnet Detailansicht.
  *
  * URL-Parameter (als Grafana TextBox Variables):
  *   var-entity  = Entity ID (z.B. vw_id_7_tourer_pro_battery_level)
  *   var-metric  = Metrik-Name (z.B. %_value, km_value, kW_value)
  *   var-title   = Anzeige-Titel (z.B. Batteriestand)
- *   var-entity2 = (optional) Zweite Entity ID für Vergleichskurve
- *   var-legend2 = (optional) Legende für zweite Kurve
- *   var-entity3 = (optional) Dritte Entity ID (z.B. Außentemperatur)
- *   var-metric3 = (optional) Metrik für dritte Entity (falls abweichend)
- *   var-legend3 = (optional) Legende für dritte Kurve
- *   var-expr4   = (optional) PromQL-Ausdruck für rechte Y-Achse (z.B. abgeleitete Leistung)
- *   var-legend4 = (optional) Legende für rechte Y-Achse
- *   var-expr5   = (optional) Zweiter PromQL-Ausdruck für rechte Y-Achse (z.B. echte Ladeleistung)
- *   var-legend5 = (optional) Legende für zweite rechte Y-Achse-Serie
+ *   var-entity2 = (optional) Zweite Entity ID fuer Vergleichskurve
+ *   var-legend2 = (optional) Legende fuer zweite Kurve
+ *   var-entity3 = (optional) Dritte Entity ID (z.B. Aussentemperatur)
+ *   var-metric3 = (optional) Metrik fuer dritte Entity (falls abweichend)
+ *   var-legend3 = (optional) Legende fuer dritte Kurve
+ *   var-expr4   = (optional) PromQL-Ausdruck fuer rechte Y-Achse (z.B. abgeleitete Leistung)
+ *   var-legend4 = (optional) Legende fuer rechte Y-Achse
+ *   var-expr5   = (optional) Zweiter PromQL-Ausdruck fuer rechte Y-Achse (z.B. echte Ladeleistung)
+ *   var-legend5 = (optional) Legende fuer zweite rechte Y-Achse-Serie
  *
- * Generate: bun src/vw-id7-detail.ts > dist/vw-id7-detail.json
+ * Generate: bun src/vw-id-detail.ts > dist/vw-id-detail.json
  * Deploy:   see README.md
  */
 
@@ -107,10 +107,10 @@ function buildDetailPanel(): TimeseriesBuilder {
     });
 }
 
-const dashboard = new DashboardBuilder('VW ID.7 Detail')
+const dashboard = new DashboardBuilder('VW ID Detail')
   .uid(VW_DETAIL_DASHBOARD_UID)
   .tags(['vw', 'ev', 'car', 'detail'])
-  .description('Detailansicht einer gewählten Metrik')
+  .description('Detailansicht einer gewaehlten Metrik')
   .editable()
   .timezone('browser')
   .refresh('5m')
@@ -179,12 +179,12 @@ const dashboard = new DashboardBuilder('VW ID.7 Detail')
       .hide(VariableHide.HideVariable)
   )
 
-  // Back link to VW ID.7 dashboard
+  // Back link — no hardcoded UID, user navigates back via browser
   .link(
-    new DashboardLinkBuilder('← VW ID.7 Tourer Pro')
+    new DashboardLinkBuilder('<- VW ID Dashboard')
       .type(DashboardLinkType.Link)
-      .url('/d/4f115fd3-1e1b-40b2-97d5-8ce33b9be093')
-      .keepTime(true)
+      .url('javascript:history.back()')
+      .keepTime(false)
       .includeVars(false)
       .icon('arrow-left')
   )

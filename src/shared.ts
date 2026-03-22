@@ -26,7 +26,7 @@ export function haQuery(expr: string, legend?: string): prometheus.DataqueryBuil
 
 // Detail dashboards for drilldown from stat panels
 export const DETAIL_DASHBOARD_UID = 'fems-detail-whs11';
-export const VW_DETAIL_DASHBOARD_UID = 'vw-id7-detail';
+export const VW_DETAIL_DASHBOARD_UID = 'vw-id-detail';
 
 // Data link for stat/gauge panels → opens detail dashboard with time series curve
 export function detailLink(title: string, metric: string, entityId: string): DashboardLinkBuilder {

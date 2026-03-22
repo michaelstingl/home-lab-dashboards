@@ -1,11 +1,10 @@
 /**
- * VW ID.7 Tourer Pro - Combined Dashboard
+ * VW ID - Generic Dashboard Generator
  *
- * Datenquelle: Home Assistant → VictoriaMetrics (InfluxDB-Protokoll)
- * Metriken: HA entity_id Sensoren via Volkswagen Connect Integration
+ * Parametrisiert per CarConfig. Generiert Dashboards fuer beliebige VW ID Modelle.
+ * Datenquelle: Home Assistant -> VictoriaMetrics (InfluxDB-Protokoll)
  *
- * Generate: npx ts-node src/vw-id7.ts > dist/vw-id7.json
- * Deploy:   see README.md
+ * Usage: bun src/vw-id.ts <id7|id3>
  */
 
 import {
@@ -22,12 +21,42 @@ import { PanelBuilder as GeomapBuilder, MapViewConfigBuilder } from '@grafana/gr
 
 import { DATASOURCE, datasourceVariable, haQuery, vwDetailLink, vwDetailLink2, BATTERY_THRESHOLDS, RANGE_THRESHOLDS } from './shared';
 
-// --- Row 1: Status Overview (y=0, h=8) ---
+// --- Car Configuration ---
 
-function batteristandGauge(): GaugeBuilder {
+export interface CarConfig {
+  model: string;           // Dashboard title, e.g. "VW ID.7 Tourer Pro"
+  entityPrefix: string;    // HA entity prefix, e.g. "vw_id_7_tourer_pro"
+  batteryKwh: number;      // Net battery capacity in kWh
+  maxDcKw: number;         // Max DC charging power in kW
+  dashboardUid: string;    // Unique Grafana dashboard UID
+  mapCenter: { lat: number; lon: number };
+}
+
+export const CARS: Record<string, CarConfig> = {
+  id7: {
+    model: 'VW ID.7 Tourer Pro',
+    entityPrefix: 'vw_id_7_tourer_pro',
+    batteryKwh: 77,
+    maxDcKw: 175,
+    dashboardUid: 'vw-id7',
+    mapCenter: { lat: 49.45, lon: 11.08 },
+  },
+  id3: {
+    model: 'VW ID.3 Pro',
+    entityPrefix: 'vw_id_3_pro',
+    batteryKwh: 58,
+    maxDcKw: 120,
+    dashboardUid: 'vw-id3',
+    mapCenter: { lat: 49.60, lon: 11.00 },
+  },
+};
+
+// --- Panel Builders ---
+
+function batteristandGauge(c: CarConfig): GaugeBuilder {
   return new GaugeBuilder()
     .title('Batteriestand')
-    .description('Aktueller Ladestand der HV-Batterie (77 kWh netto)')
+    .description(`Aktueller Ladestand der HV-Batterie (${c.batteryKwh} kWh netto)`)
     .datasource(DATASOURCE)
     .height(8).span(6)
     .min(0).max(100)
@@ -38,15 +67,15 @@ function batteristandGauge(): GaugeBuilder {
         .steps(BATTERY_THRESHOLDS)
     )
     .withTarget(
-      haQuery('last_over_time({__name__="%_value", entity_id="vw_id_7_tourer_pro_battery_level"}[4h])')
+      haQuery(`last_over_time({__name__="%_value", entity_id="${c.entityPrefix}_battery_level"}[4h])`)
     )
-    .dataLinks([vwDetailLink('Batteriestand', '%_value', 'vw_id_7_tourer_pro_battery_level')]);
+    .dataLinks([vwDetailLink('Batteriestand', '%_value', `${c.entityPrefix}_battery_level`)]);
 }
 
-function reichweiteStat(): StatBuilder {
+function reichweiteStat(c: CarConfig): StatBuilder {
   return new StatBuilder()
     .title('Reichweite')
-    .description('Geschätzte elektrische Restreichweite laut Fahrzeug')
+    .description('Geschaetzte elektrische Restreichweite laut Fahrzeug')
     .datasource(DATASOURCE)
     .height(8).span(6)
     .unit('lengthkm')
@@ -58,12 +87,12 @@ function reichweiteStat(): StatBuilder {
         .steps(RANGE_THRESHOLDS)
     )
     .withTarget(
-      haQuery('last_over_time({__name__="km_value", entity_id="vw_id_7_tourer_pro_electric_range"}[4h])')
+      haQuery(`last_over_time({__name__="km_value", entity_id="${c.entityPrefix}_electric_range"}[4h])`)
     )
-    .dataLinks([vwDetailLink('Reichweite', 'km_value', 'vw_id_7_tourer_pro_electric_range')]);
+    .dataLinks([vwDetailLink('Reichweite', 'km_value', `${c.entityPrefix}_electric_range`)]);
 }
 
-function kilometerstandStat(): StatBuilder {
+function kilometerstandStat(c: CarConfig): StatBuilder {
   return new StatBuilder()
     .title('Kilometerstand')
     .description('Gesamtkilometer laut Tacho (Odometer)')
@@ -82,15 +111,15 @@ function kilometerstandStat(): StatBuilder {
         .steps([{ value: null as unknown as number, color: 'blue' }])
     )
     .withTarget(
-      haQuery('last_over_time({__name__="km_value", entity_id="vw_id_7_tourer_pro_odometer"}[4h])')
+      haQuery(`last_over_time({__name__="km_value", entity_id="${c.entityPrefix}_odometer"}[4h])`)
     )
-    .dataLinks([vwDetailLink('Kilometerstand', 'km_value', 'vw_id_7_tourer_pro_odometer')]);
+    .dataLinks([vwDetailLink('Kilometerstand', 'km_value', `${c.entityPrefix}_odometer`)]);
 }
 
-function serviceInStat(): StatBuilder {
+function serviceInStat(c: CarConfig): StatBuilder {
   return new StatBuilder()
     .title('Service in')
-    .description('Tage bis zur nächsten Inspektion laut Serviceplan')
+    .description('Tage bis zur naechsten Inspektion laut Serviceplan')
     .datasource(DATASOURCE)
     .height(8).span(6)
     .decimals(0)
@@ -108,17 +137,17 @@ function serviceInStat(): StatBuilder {
         ])
     )
     .withTarget(
-      haQuery('last_over_time({__name__="d_value", entity_id="vw_id_7_tourer_pro_service_inspection_days"}[4h])')
+      haQuery(`last_over_time({__name__="d_value", entity_id="${c.entityPrefix}_service_inspection_days"}[4h])`)
     )
-    .dataLinks([vwDetailLink('Service in', 'd_value', 'vw_id_7_tourer_pro_service_inspection_days')]);
+    .dataLinks([vwDetailLink('Service in', 'd_value', `${c.entityPrefix}_service_inspection_days`)]);
 }
 
-// --- Row 2: History Charts (y=8, h=10) ---
+// --- Row 2: History Charts ---
 
-function batteristandVerlauf(): TimeseriesBuilder {
+function batteristandVerlauf(c: CarConfig): TimeseriesBuilder {
   return new TimeseriesBuilder()
     .title('Batteriestand (Verlauf)')
-    .description('HV-Batterie Ladestand über Zeit. Datenlücken = Auto im Schlafmodus')
+    .description('HV-Batterie Ladestand ueber Zeit. Datenluecken = Auto im Schlafmodus')
     .datasource(DATASOURCE)
     .height(10).span(12)
     .min(0).max(100)
@@ -135,14 +164,14 @@ function batteristandVerlauf(): TimeseriesBuilder {
       new common.VizLegendOptionsBuilder().showLegend(false)
     )
     .withTarget(
-      haQuery('{__name__="%_value", entity_id="vw_id_7_tourer_pro_battery_level"}', 'Batterie %')
+      haQuery(`{__name__="%_value", entity_id="${c.entityPrefix}_battery_level"}`, 'Batterie %')
     );
 }
 
-function reichweiteVerlauf(): TimeseriesBuilder {
+function reichweiteVerlauf(c: CarConfig): TimeseriesBuilder {
   return new TimeseriesBuilder()
     .title('Reichweite (Verlauf)')
-    .description('Elektrische Restreichweite über Zeit. Abhängig von Fahrverhalten, Temperatur, Klima')
+    .description('Elektrische Restreichweite ueber Zeit. Abhaengig von Fahrverhalten, Temperatur, Klima')
     .datasource(DATASOURCE)
     .height(10).span(12)
     .min(0)
@@ -159,16 +188,16 @@ function reichweiteVerlauf(): TimeseriesBuilder {
       new common.VizLegendOptionsBuilder().showLegend(false)
     )
     .withTarget(
-      haQuery('{__name__="km_value", entity_id="vw_id_7_tourer_pro_electric_range"}', 'Reichweite km')
+      haQuery(`{__name__="km_value", entity_id="${c.entityPrefix}_electric_range"}`, 'Reichweite km')
     );
 }
 
-// --- Row 3: Kilometerstand + Ladeleistung (y=18, h=8) ---
+// --- Row 3: Kilometerstand + Ladeleistung ---
 
-function kilometerstandVerlauf(): TimeseriesBuilder {
+function kilometerstandVerlauf(c: CarConfig): TimeseriesBuilder {
   return new TimeseriesBuilder()
     .title('Kilometerstand (Verlauf)')
-    .description('Gesamtkilometer über Zeit. Steigende Flanken = Fahrten')
+    .description('Gesamtkilometer ueber Zeit. Steigende Flanken = Fahrten')
     .datasource(DATASOURCE)
     .height(8).span(12)
     .decimals(0)
@@ -185,14 +214,15 @@ function kilometerstandVerlauf(): TimeseriesBuilder {
       new common.VizLegendOptionsBuilder().showLegend(false)
     )
     .withTarget(
-      haQuery('{__name__="km_value", entity_id="vw_id_7_tourer_pro_odometer"}', 'km')
+      haQuery(`{__name__="km_value", entity_id="${c.entityPrefix}_odometer"}`, 'km')
     );
 }
 
-function ladeleistungVerlauf(): TimeseriesBuilder {
+function ladeleistungVerlauf(c: CarConfig): TimeseriesBuilder {
+  const dcThreshold = Math.round(c.maxDcKw * 0.6);
   return new TimeseriesBuilder()
     .title('Ladeleistung (Verlauf)')
-    .description('Ladeleistung über Zeit. AC ≈ 11 kW, DC bis 175 kW. Balken = Ladeevent')
+    .description(`Ladeleistung ueber Zeit. AC ca. 11 kW, DC bis ${c.maxDcKw} kW. Balken = Ladeevent`)
     .datasource(DATASOURCE)
     .height(8).span(12)
     .min(0)
@@ -207,21 +237,21 @@ function ladeleistungVerlauf(): TimeseriesBuilder {
         .steps([
           { value: null as unknown as number, color: 'text' },
           { value: 1, color: 'green' },
-          { value: 50, color: 'yellow' },
-          { value: 100, color: 'orange' },
+          { value: dcThreshold, color: 'yellow' },
+          { value: c.maxDcKw, color: 'orange' },
         ])
     )
     .legend(
       new common.VizLegendOptionsBuilder().showLegend(false)
     )
     .withTarget(
-      haQuery('{__name__="kW_value", entity_id="vw_id_7_tourer_pro_charging_power"}', 'kW')
+      haQuery(`{__name__="kW_value", entity_id="${c.entityPrefix}_charging_power"}`, 'kW')
     );
 }
 
-// --- Row 4: Charging & Battery Details (y=26, h=6) ---
+// --- Row 4: Charging & Battery Details ---
 
-function ladeleistungStat(): StatBuilder {
+function ladeleistungStat(c: CarConfig): StatBuilder {
   return new StatBuilder()
     .title('Ladeleistung')
     .description('Aktuelle Ladeleistung laut VW API. 0 kW = nicht am Ladekabel')
@@ -239,15 +269,15 @@ function ladeleistungStat(): StatBuilder {
         ])
     )
     .withTarget(
-      haQuery('last_over_time({__name__="kW_value", entity_id="vw_id_7_tourer_pro_charging_power"}[4h])')
+      haQuery(`last_over_time({__name__="kW_value", entity_id="${c.entityPrefix}_charging_power"}[4h])`)
     )
-    .dataLinks([vwDetailLink('Ladeleistung', 'kW_value', 'vw_id_7_tourer_pro_charging_power')]);
+    .dataLinks([vwDetailLink('Ladeleistung', 'kW_value', `${c.entityPrefix}_charging_power`)]);
 }
 
-function restladezeitStat(): StatBuilder {
+function restladezeitStat(c: CarConfig): StatBuilder {
   return new StatBuilder()
     .title('Restladezeit')
-    .description('Geschätzte Restdauer bis zum Ziel-Ladestand')
+    .description('Geschaetzte Restdauer bis zum Ziel-Ladestand')
     .datasource(DATASOURCE)
     .height(6).span(6)
     .unit('m')
@@ -259,15 +289,16 @@ function restladezeitStat(): StatBuilder {
         .steps([{ value: null as unknown as number, color: 'text' }])
     )
     .withTarget(
-      haQuery('last_over_time({__name__="min_value", entity_id="vw_id_7_tourer_pro_charging_time_left"}[4h])')
+      haQuery(`last_over_time({__name__="min_value", entity_id="${c.entityPrefix}_charging_time_left"}[4h])`)
     )
-    .dataLinks([vwDetailLink('Restladezeit', 'min_value', 'vw_id_7_tourer_pro_charging_time_left')]);
+    .dataLinks([vwDetailLink('Restladezeit', 'min_value', `${c.entityPrefix}_charging_time_left`)]);
 }
 
-function batterieTemperaturStat(): StatBuilder {
+function batterieTemperaturStat(c: CarConfig): StatBuilder {
+  const derivFactor = c.batteryKwh * 36;
   return new StatBuilder()
     .title('Batterie-Temperatur')
-    .description('Mittelwert aus Min/Max HV-Batterie-Temperatur. Detail: Min, Max, Außentemp, Lade-/Entladeleistung')
+    .description('Mittelwert aus Min/Max HV-Batterie-Temperatur. Detail: Min, Max, Aussentemp, Lade-/Entladeleistung')
     .datasource(DATASOURCE)
     .height(6).span(6)
     .unit('celsius')
@@ -284,22 +315,22 @@ function batterieTemperaturStat(): StatBuilder {
         ])
     )
     .withTarget(
-      haQuery('(scalar(last_over_time({__name__="°C_value", entity_id="vw_id_7_tourer_pro_hv_battery_max_temperature"}[4h])) + scalar(last_over_time({__name__="°C_value", entity_id="vw_id_7_tourer_pro_hv_battery_min_temperature"}[4h]))) / 2', 'Ø')
+      haQuery(`(scalar(last_over_time({__name__="°C_value", entity_id="${c.entityPrefix}_hv_battery_max_temperature"}[4h])) + scalar(last_over_time({__name__="°C_value", entity_id="${c.entityPrefix}_hv_battery_min_temperature"}[4h]))) / 2`, 'Ø')
     )
     .dataLinks([vwDetailLink2(
       'Max', '°C_value',
-      'vw_id_7_tourer_pro_hv_battery_max_temperature',
-      'vw_id_7_tourer_pro_hv_battery_min_temperature', 'Min',
-      { entityId: 'vw_id_7_tourer_pro_outdoor_temperature', metric: '°C_value', legend: 'Außentemperatur' },
-      { expr: 'deriv({__name__="%_value", entity_id="vw_id_7_tourer_pro_battery_level"}[15m]) * 2772', legend: 'Leistung abgeleitet (kW)' },
-      { expr: '{__name__="kW_value", entity_id="vw_id_7_tourer_pro_charging_power"}', legend: 'Ladeleistung (kW)' },
+      `${c.entityPrefix}_hv_battery_max_temperature`,
+      `${c.entityPrefix}_hv_battery_min_temperature`, 'Min',
+      { entityId: `${c.entityPrefix}_outdoor_temperature`, metric: '°C_value', legend: 'Aussentemperatur' },
+      { expr: `deriv({__name__="%_value", entity_id="${c.entityPrefix}_battery_level"}[15m]) * ${derivFactor}`, legend: 'Leistung abgeleitet (kW)' },
+      { expr: `{__name__="kW_value", entity_id="${c.entityPrefix}_charging_power"}`, legend: 'Ladeleistung (kW)' },
     )]);
 }
 
-function zielLadestandStat(): StatBuilder {
+function zielLadestandStat(c: CarConfig): StatBuilder {
   return new StatBuilder()
     .title('Ziel-Ladestand')
-    .description('Eingestellter Ziel-Ladestand (Target SoC) für AC-Laden')
+    .description('Eingestellter Ziel-Ladestand (Target SoC) fuer AC-Laden')
     .datasource(DATASOURCE)
     .height(6).span(6)
     .unit('percent')
@@ -311,14 +342,14 @@ function zielLadestandStat(): StatBuilder {
         .steps([{ value: null as unknown as number, color: 'green' }])
     )
     .withTarget(
-      haQuery('last_over_time({__name__="%_value", entity_id="vw_id_7_tourer_pro_battery_target_charge_level"}[4h])')
+      haQuery(`last_over_time({__name__="%_value", entity_id="${c.entityPrefix}_battery_target_charge_level"}[4h])`)
     )
-    .dataLinks([vwDetailLink('Ziel-Ladestand', '%_value', 'vw_id_7_tourer_pro_battery_target_charge_level')]);
+    .dataLinks([vwDetailLink('Ziel-Ladestand', '%_value', `${c.entityPrefix}_battery_target_charge_level`)]);
 }
 
-// --- Row 5: Geomap (y=32, h=12) ---
+// --- Row 5: Geomap ---
 
-function fahrzeugPosition(): GeomapBuilder {
+function fahrzeugPosition(c: CarConfig): GeomapBuilder {
   return new GeomapBuilder()
     .title('Parkposition')
     .description('Letzte bekannte GPS-Position des Fahrzeugs (VW API)')
@@ -351,15 +382,15 @@ function fahrzeugPosition(): GeomapBuilder {
     .view(
       new MapViewConfigBuilder()
         .id('fit')
-        .lat(49.45)
-        .lon(11.04)
+        .lat(c.mapCenter.lat)
+        .lon(c.mapCenter.lon)
         .zoom(10)
         .allLayers(true)
     )
     .withTarget(
       new prometheus.DataqueryBuilder()
         .datasource(DATASOURCE)
-        .expr('{__name__="°_value", entity_id="vw_id_7_tourer_pro_latitude"}')
+        .expr(`{__name__="°_value", entity_id="${c.entityPrefix}_latitude"}`)
         .format(prometheus.PromQueryFormat.Table)
         .legendFormat('latitude')
         .refId('A')
@@ -367,7 +398,7 @@ function fahrzeugPosition(): GeomapBuilder {
     .withTarget(
       new prometheus.DataqueryBuilder()
         .datasource(DATASOURCE)
-        .expr('{__name__="°_value", entity_id="vw_id_7_tourer_pro_longitude"}')
+        .expr(`{__name__="°_value", entity_id="${c.entityPrefix}_longitude"}`)
         .format(prometheus.PromQueryFormat.Table)
         .legendFormat('longitude')
         .refId('B')
@@ -387,36 +418,48 @@ function fahrzeugPosition(): GeomapBuilder {
     });
 }
 
-// --- Dashboard ---
+// --- Dashboard Builder ---
 
-const dashboard = new DashboardBuilder('VW ID.7 Tourer Pro')
-  .uid('4f115fd3-1e1b-40b2-97d5-8ce33b9be093')
-  .tags(['vw', 'ev', 'car'])
-  .editable()
-  .timezone('browser')
-  .refresh('5m')
-  .time({ from: 'now-24h', to: 'now' })
-  .withVariable(datasourceVariable())
-  // Row 1: Status Overview
-  .withPanel(batteristandGauge())
-  .withPanel(reichweiteStat())
-  .withPanel(kilometerstandStat())
-  .withPanel(serviceInStat())
-  // Row 2: History Charts
-  .withPanel(batteristandVerlauf())
-  .withPanel(reichweiteVerlauf())
-  // Row 3: Kilometerstand + Ladeleistung
-  .withPanel(kilometerstandVerlauf())
-  .withPanel(ladeleistungVerlauf())
-  // Row 4: Charging & Battery Details
-  .withPanel(ladeleistungStat())
-  .withPanel(restladezeitStat())
-  .withPanel(batterieTemperaturStat())
-  .withPanel(zielLadestandStat())
-  // Row 5: Map
-  .withPanel(fahrzeugPosition());
+export function buildVwDashboard(c: CarConfig): object {
+  const dashboard = new DashboardBuilder(c.model)
+    .uid(c.dashboardUid)
+    .tags(['vw', 'ev', 'car'])
+    .editable()
+    .timezone('browser')
+    .refresh('5m')
+    .time({ from: 'now-24h', to: 'now' })
+    .withVariable(datasourceVariable())
+    // Row 1: Status Overview
+    .withPanel(batteristandGauge(c))
+    .withPanel(reichweiteStat(c))
+    .withPanel(kilometerstandStat(c))
+    .withPanel(serviceInStat(c))
+    // Row 2: History Charts
+    .withPanel(batteristandVerlauf(c))
+    .withPanel(reichweiteVerlauf(c))
+    // Row 3: Kilometerstand + Ladeleistung
+    .withPanel(kilometerstandVerlauf(c))
+    .withPanel(ladeleistungVerlauf(c))
+    // Row 4: Charging & Battery Details
+    .withPanel(ladeleistungStat(c))
+    .withPanel(restladezeitStat(c))
+    .withPanel(batterieTemperaturStat(c))
+    .withPanel(zielLadestandStat(c))
+    // Row 5: Map
+    .withPanel(fahrzeugPosition(c));
 
-console.log(JSON.stringify({
-  dashboard: dashboard.build(),
-  overwrite: true,
-}, null, 2));
+  return {
+    dashboard: dashboard.build(),
+    overwrite: true,
+  };
+}
+
+// --- CLI ---
+
+const carKey = process.argv[2];
+if (!carKey || !CARS[carKey]) {
+  console.error(`Usage: bun src/vw-id.ts <${Object.keys(CARS).join('|')}>`);
+  process.exit(1);
+}
+
+console.log(JSON.stringify(buildVwDashboard(CARS[carKey]), null, 2));
