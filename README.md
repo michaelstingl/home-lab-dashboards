@@ -6,7 +6,12 @@ Grafana dashboards as TypeScript code using the [Grafana Foundation SDK](https:/
 
 | Dashboard | File | Description |
 |-----------|------|-------------|
-| **VW ID.7 Tourer Pro** | `src/vw-id7.ts` | EV dashboard: Gauge, Stats, Timeseries, Geomap (13 panels) |
+| **VW ID.7 Tourer Pro** | `src/vw-id.ts id7` | EV dashboard: Gauge, Stats, Timeseries, Geomap (13 panels) |
+| **VW ID.3** | `src/vw-id.ts id3` | Same layout as ID.7, different entity set |
+| **VW Detail** | `src/vw-id-detail.ts` | Single-metric drill-down for VW dashboards |
+| **FENECON Energiemonitor** | `src/fems-energy.ts` | PV, battery, grid, wallbox, autarky (19 panels) |
+| **FEMS Detail** | `src/fems-detail.ts` | Single-metric drill-down for FEMS dashboard |
+| **MLX Inference** | `src/mlx-inference.ts` | `mlx-vlm` server metrics: throughput, latency percentiles, tool-use share, body sizes, errors (11 panels) |
 
 ## Requirements
 
@@ -27,13 +32,16 @@ bun run typecheck
 
 # Generate dashboard JSON
 bun run build                # all dashboards
-bun run build:vw             # VW ID.7 only
+bun run build:vw-id7         # VW ID.7 only
+bun run build:fems           # FENECON Energiemonitor only
+bun run build:mlx            # MLX Inference only
 
-# Deploy to Grafana
+# Deploy to Grafana (AKS-95 example, see top-level CLAUDE.md for Grafana creds)
+GRAFANA_PW=$(op item get "Grafana (admin, AKS-95)" --vault Personal --reveal --fields password)
 curl -s -u "admin:$GRAFANA_PW" \
   -X POST -H "Content-Type: application/json" \
-  -d @dist/vw-id7.json \
-  https://your-grafana-instance/api/dashboards/db
+  -d @dist/mlx-inference.json \
+  https://monitoring.stingl.cloud/api/dashboards/db
 ```
 
 ## Datasource
@@ -46,7 +54,11 @@ Dashboards use a **template variable** (`$datasource`) instead of a hardcoded da
 home-lab-dashboards/
 ├── src/
 │   ├── shared.ts              # Datasource variable, query helpers, common thresholds
-│   └── vw-id7.ts              # 13 panels: Gauge, Stat, Timeseries, Geomap
+│   ├── vw-id.ts               # VW ID.7 + ID.3 (parametrised entity sets)
+│   ├── vw-id-detail.ts        # VW single-metric drill-down
+│   ├── fems-energy.ts         # FENECON Energiemonitor (19 panels)
+│   ├── fems-detail.ts         # FEMS single-metric drill-down
+│   └── mlx-inference.ts       # MLX Inference (11 panels: throughput, latency, tools, bodies, errors)
 ├── dist/                      # Generated JSON (gitignored)
 ├── tsconfig.json
 └── package.json
