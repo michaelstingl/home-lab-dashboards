@@ -12,6 +12,7 @@ Grafana dashboards as TypeScript code using the [Grafana Foundation SDK](https:/
 | **FENECON Energiemonitor** | `src/fems-energy.ts` | PV, battery, grid, wallbox, autarky (19 panels) |
 | **FEMS Detail** | `src/fems-detail.ts` | Single-metric drill-down for FEMS dashboard |
 | **MLX Inference** | `src/mlx-inference.ts` | `mlx-vlm` server metrics: throughput, latency percentiles, tool-use share, body sizes, errors (11 panels) |
+| **Esprimo Health** | `src/esprimo-health.ts` | PVE host health (AKS-95): temps, SMART, RAS events, watchdog state, boot/reboot count (15 panels) |
 
 ## Requirements
 
